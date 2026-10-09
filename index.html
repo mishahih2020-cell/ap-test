@@ -123,17 +123,29 @@ DATA.open.forEach(function(x){ALL.push({id:x.id,type:'open',topic:x.t,q:x.q,acce
 var BYID={};ALL.forEach(function(q){BYID[q.id]=q;});
 var $app=document.getElementById('app');
 var settings={src:'all',mode:'instant',count:10,topics:Object.keys(TOPICS),open:true,verified:false};
-try{var s=JSON.parse(localStorage.getItem('ap-test-settings')||'null');if(s&&typeof s==='object'){settings.mode=s.mode==='end'?'end':'instant';settings.src=s.src==='scr'?'scr':'all';if([5,10,20,50,0].indexOf(s.count)>-1)settings.count=s.count;if(Array.isArray(s.topics)){var t=s.topics.filter(function(k){return TOPICS[k];});if(t.length)settings.topics=t;}settings.open=s.open!==false;settings.verified=!!s.verified;}}catch(e){}
+try{var s=JSON.parse(localStorage.getItem('ap-test-settings')||'null');if(s&&typeof s==='object'){settings.mode=s.mode==='end'?'end':'instant';settings.src=s.src==='scr'?'scr':(s.src==='err'?'err':'all');if([5,10,20,50,0].indexOf(s.count)>-1)settings.count=s.count;if(Array.isArray(s.topics)){var t=s.topics.filter(function(k){return TOPICS[k];});if(t.length)settings.topics=t;}settings.open=s.open!==false;settings.verified=!!s.verified;}}catch(e){}
+var NEED=6;
+var errs={};
+try{var e0=JSON.parse(localStorage.getItem('ap-test-errors')||'{}');if(e0&&typeof e0==='object'){for(var k in e0){if(BYID[k]&&e0[k]&&typeof e0[k].ok==='number')errs[k]={ok:Math.max(0,Math.min(NEED-1,e0[k].ok|0))};}}}catch(e){}
+function saveErrs(){try{localStorage.setItem('ap-test-errors',JSON.stringify(errs));}catch(e){}}
+function errCount(){return Object.keys(errs).length;}
+function record(item){
+ if(item.counted)return;item.counted=true;var id=item.q.id;
+ if(!item.ok){if(!errs[id])errs[id]={ok:0};}
+ else if(errs[id]){errs[id].ok++;if(errs[id].ok>=NEED)delete errs[id];}
+ saveErrs();
+}
 function save(){try{localStorage.setItem('ap-test-settings',JSON.stringify(settings));}catch(e){}}
 function el(tag,attrs,kids){var n=document.createElement(tag);if(attrs)for(var k in attrs){if(k==='class')n.className=attrs[k];else if(k==='text')n.textContent=attrs[k];else if(k.slice(0,2)==='on')n.addEventListener(k.slice(2),attrs[k]);else n.setAttribute(k,attrs[k]);}
  (kids||[]).forEach(function(c){if(c==null)return;n.appendChild(typeof c==='string'?document.createTextNode(c):c);});return n;}
 function shuffle(a){a=a.slice();for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t;}return a;}
-function pool(){return ALL.filter(function(q){return settings.topics.indexOf(q.topic)>-1&&(settings.open||q.type==='mc')&&(!settings.verified||!q.flag)&&(settings.src!=='scr'||q.scr);});}
+function pool(){if(settings.src==='err')return ALL.filter(function(q){return !!errs[q.id];});return ALL.filter(function(q){return settings.topics.indexOf(q.topic)>-1&&(settings.open||q.type==='mc')&&(!settings.verified||!q.flag)&&(settings.src!=='scr'||q.scr);});}
 var run=null;
 /* ---------- старт ---------- */
 function home(){
  run=null;$app.innerHTML='';
  var p=pool();
+ var isErr=settings.src==='err';
  var counts={};ALL.forEach(function(q){if((settings.open||q.type==='mc')&&(!settings.verified||!q.flag)&&(settings.src!=='scr'||q.scr))counts[q.topic]=(counts[q.topic]||0)+1;});
  var segMode=el('div',{class:'seg',role:'group','aria-label':'Режим проверки'},[
   el('button',{class:settings.mode==='instant'?'on':'',type:'button',text:'Сразу показывать ответ',onclick:function(){settings.mode='instant';save();home();}}),
@@ -141,7 +153,8 @@ function home(){
  var nScr=ALL.filter(function(q){return q.scr;}).length;
  var segSrc=el('div',{class:'seg',role:'group','aria-label':'База заданий'},[
   el('button',{class:settings.src==='all'?'on':'',type:'button',text:'Вся база ('+ALL.length+')',onclick:function(){settings.src='all';save();home();}}),
-  el('button',{class:settings.src==='scr'?'on':'',type:'button',text:'Только из скринов ('+nScr+')',onclick:function(){settings.src='scr';save();home();}})]);
+  el('button',{class:settings.src==='scr'?'on':'',type:'button',text:'Только из скринов ('+nScr+')',onclick:function(){settings.src='scr';save();home();}}),
+  el('button',{class:settings.src==='err'?'on':'',type:'button',text:'Ошибки ('+errCount()+')',onclick:function(){settings.src='err';save();home();}})]);
  var cnts=[5,10,20,50,0].map(function(n){return el('button',{class:settings.count===n?'on':'',type:'button',text:n===0?'Все ('+p.length+')':String(n),onclick:function(){settings.count=n;save();home();}});});
  var topicBox=el('div',{class:'topics'},Object.keys(TOPICS).map(function(k){
   var cb=el('input',{type:'checkbox'});cb.checked=settings.topics.indexOf(k)>-1;
@@ -150,6 +163,7 @@ function home(){
  var cbOpen=el('input',{type:'checkbox'});cbOpen.checked=settings.open;cbOpen.addEventListener('change',function(){settings.open=cbOpen.checked;save();home();});
  var cbVer=el('input',{type:'checkbox'});cbVer.checked=settings.verified;cbVer.addEventListener('change',function(){settings.verified=cbVer.checked;save();home();});
  var n=settings.count===0?p.length:Math.min(settings.count,p.length);
+ if(isErr&&!p.length)n=0;
  var start=el('button',{class:'primary',type:'button',text:'Начать тест ('+n+')',onclick:function(){begin(shuffle(p).slice(0,n).map(function(q){return q.id;}));}});
  if(!n)start.disabled=true;
  var nFlag=ALL.filter(function(q){return q.flag;}).length;
@@ -160,12 +174,12 @@ function home(){
   el('div',{class:'sec',style:'margin-top:0',text:'Режим проверки'}),segMode,
   el('p',{class:'hint',text:settings.mode==='instant'?'После ответа сразу видно верно/неверно, правильный вариант и пояснение.':'Можно переходить между вопросами и менять ответы. Результат — после «Завершить тест».'}),
   el('div',{class:'sec',text:'База заданий'}),segSrc,
-  el('p',{class:'hint',text:settings.src==='scr'?'Только задания с фотографий и скриншотов тех, кто уже писал работу (реальные формулировки экзамена).':'Все задания, включая большой сводный файл.'}),
+  el('p',{class:'hint',text:settings.src==='scr'?'Только задания с фотографий и скриншотов тех, кто уже писал работу (реальные формулировки экзамена).':(settings.src==='err'?'Задания, в которых вы хотя бы раз ошиблись.':'Все задания, включая большой сводный файл.')}),
+  (settings.src==='err'?el('div',{class:'expl',style:'margin:8px 0'},[el('div',{class:'verdict',text:'Как работает база «Ошибки»'}),el('div',{text:'Задание попадает сюда после первой ошибки — в любом режиме и в любой базе. Оно остаётся в списке, пока вы не решите его верно более 5 раз (то есть 6 раз и больше): каждый верный ответ засчитывается один раз за попытку. Прогресс хранится только в этом браузере.'}),(errCount()?el('div',{style:'margin-top:8px'},[el('button',{class:'linkbtn',type:'button',text:'Очистить список ошибок',onclick:function(){if(confirm('Удалить все задания из базы «Ошибки»?')){errs={};saveErrs();home();}}})]):null)]):null),
   el('div',{class:'sec',text:'Количество вопросов'}),el('div',{class:'seg'},cnts),
-  el('div',{class:'sec',text:'Темы'}),el('div',{style:'margin:-4px 0 4px'},[el('button',{class:'linkbtn',type:'button',text:'Выбрать все',onclick:function(){settings.topics=Object.keys(TOPICS);save();home();}}),el('button',{class:'linkbtn',type:'button',text:'Снять все',onclick:function(){settings.topics=[];save();home();}})]),topicBox,
-  el('div',{class:'sec',text:'Дополнительно'}),
-  el('div',{class:'topics'},[el('label',null,[cbOpen,el('span',{text:'Включать вопросы с вводом ответа'})]),el('label',null,[cbVer,el('span',{text:'Только вопросы без пометки «требует проверки»'})])]),
-  el('div',{class:'start'},[start])]));
+  (isErr?null:el('div',null,[el('div',{class:'sec',text:'Темы'}),el('div',{style:'margin:-4px 0 4px'},[el('button',{class:'linkbtn',type:'button',text:'Выбрать все',onclick:function(){settings.topics=Object.keys(TOPICS);save();home();}}),el('button',{class:'linkbtn',type:'button',text:'Снять все',onclick:function(){settings.topics=[];save();home();}})]),topicBox])),
+  (isErr?null:el('div',null,[el('div',{class:'sec',text:'Дополнительно'}),
+  el('div',{class:'topics'},[el('label',null,[cbOpen,el('span',{text:'Включать вопросы с вводом ответа'})]),el('label',null,[cbVer,el('span',{text:'Только вопросы без пометки «требует проверки»'})])])])),el('div',{class:'start'},[start])]));
 }
 /* ---------- попытка ---------- */
 function begin(ids){
@@ -189,7 +203,7 @@ function grade(item){
  if(item.q.type==='open')return gradeOpen(item);
  var a=item.q.ans.slice().sort().join(','),s=item.sel.slice().sort().join(',');return a===s;
 }
-function commit(item){if(item.done)return;item.done=true;item.ok=grade(item);}
+function commit(item){if(item.done)return;item.done=true;item.ok=grade(item);record(item);}
 function answered(item){return item.q.type==='mc'?item.sel.length>0:item.text.trim().length>0;}
 function stat(){
  var d=run.qs.filter(function(x){return x.done;}),ok=d.filter(function(x){return x.ok;}).length;
@@ -210,7 +224,7 @@ function render(){
  bar.firstChild.style.width=(100*ans/N)+'%';
  sticky.appendChild(bar);$app.appendChild(sticky);
  var card=el('div',{class:'card fade',style:'margin-top:8px'});
- card.appendChild(el('div',null,[el('span',{class:'tag',text:TOPICS[q.topic]}),(q.flag?el('span',{class:'badge',title:'Ответ требует сверки',text:'⚠ проверить'}):null)]));
+ card.appendChild(el('div',null,[el('span',{class:'tag',text:TOPICS[q.topic]}),(q.flag?el('span',{class:'badge',title:'Ответ требует сверки',text:'⚠ проверить'}):null),(errs[q.id]?el('span',{class:'badge',style:'background:var(--bad-bg);color:var(--bad)',text:'Ошибка · верно '+errs[q.id].ok+' из '+NEED}):null)]));
  card.appendChild(el('div',{class:'q',text:q.q}));
  var locked=item.done&&inst;
  if(q.type==='mc'){
@@ -279,7 +293,7 @@ function go(d){var n=run.i+d;if(n<0||n>=run.qs.length)return;run.i=n;render();wi
 function finishEnd(){
  var un=run.qs.filter(function(x){return !answered(x);}).length;
  if(un&&!confirm('Без ответа: '+un+'. Завершить тест?'))return;
- run.qs.forEach(function(x){x.done=true;x.ok=answered(x)?grade(x):false;});
+ run.qs.forEach(function(x){x.done=true;x.ok=answered(x)?grade(x):false;if(answered(x))record(x);});
  run.finished=true;render();window.scrollTo(0,0);
 }
 /* ---------- итоги ---------- */

@@ -74,7 +74,39 @@ input.txt{width:100%;font:inherit;padding:12px 14px;border:1.5px solid var(--lin
 .res .body p{margin:6px 0;overflow-wrap:anywhere}
 .lab{color:var(--mute);font-size:13px}
 .hidden{display:none!important}
-@media (max-width:480px){.q{font-size:17px}.big{font-size:38px}}
+.hero{padding:18px 4px 6px}
+.hero h1{font-size:26px;letter-spacing:-.3px}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 14px}
+.chip{background:var(--card);border:1px solid var(--line);border-radius:99px;padding:4px 12px;font-size:13px;color:var(--mute)}
+.chip b{color:var(--ink)}
+.sec{margin:18px 0 8px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--mute)}
+.linkbtn{border:0;background:none;color:var(--brand);padding:2px 6px;min-height:0;font-size:13px}
+.sticky{position:sticky;top:0;z-index:5;background:var(--bg);padding:10px 0 8px;margin:0 0 6px}
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:12px;padding:2px 9px;border-radius:99px;background:var(--warn-bg);color:var(--warn);margin-left:6px;vertical-align:middle;font-weight:600}
+.opt .lt{flex:none;width:28px;height:28px;border-radius:8px;background:var(--bg);border:1px solid var(--line);display:grid;place-items:center;font-size:13px;font-weight:700;color:var(--mute)}
+.opt.sel .lt{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}
+.opt.ok .lt{background:var(--ok);border-color:var(--ok);color:#fff}
+.opt.bad .lt{background:var(--bad);border-color:var(--bad);color:#fff}
+.opt .tx{flex:1;padding-top:2px}
+.opt:active{transform:scale(.995)}
+.card.fade{animation:fd .2s ease-out}
+@keyframes fd{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.dock{position:sticky;bottom:0;z-index:5;background:linear-gradient(to top,var(--bg) 70%,transparent);padding:14px 0 calc(10px + env(safe-area-inset-bottom));margin-top:8px}
+.dock .row{justify-content:space-between}
+.dock .row>button{flex:1;min-width:0}
+.dock .row>.primary{flex:2}
+.ring{--p:0;width:132px;height:132px;border-radius:50%;background:conic-gradient(var(--c,var(--brand)) calc(var(--p)*1%),var(--line) 0);display:grid;place-items:center;margin:4px auto 10px}
+.ring>div{width:104px;height:104px;border-radius:50%;background:var(--card);display:grid;place-items:center;font-size:30px;font-weight:800}
+.msg{text-align:center;font-size:17px;font-weight:600;margin-bottom:4px}
+.kbd{font-size:12px;color:var(--mute);text-align:center;margin-top:10px}
+kbd{border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:0 5px;font:inherit;font-size:11px;background:var(--card)}
+.grid button.mark{box-shadow:inset 0 -3px 0 var(--warn)}
+.start{position:sticky;bottom:0;background:linear-gradient(to top,var(--card) 75%,transparent);padding:14px 0 4px;margin-top:8px}
+.start button{width:100%;min-height:50px;font-size:17px}
+@media (max-width:480px){.q{font-size:17px}.hero h1{font-size:23px}.kbd{display:none}}
+@media (min-width:900px){.wrap{max-width:820px}}
+button,.opt{touch-action:manipulation}
+.seg button{min-width:0}
 </style>
 </head>
 <body>
@@ -116,16 +148,18 @@ function home(){
  var n=settings.count===0?p.length:Math.min(settings.count,p.length);
  var start=el('button',{class:'primary',type:'button',text:'Начать тест ('+n+')',onclick:function(){begin(shuffle(p).slice(0,n).map(function(q){return q.id;}));}});
  if(!n)start.disabled=true;
- $app.appendChild(el('h1',{text:'Тест по административному праву'}));
- $app.appendChild(el('p',{class:'sub',text:'База: '+ALL.length+' заданий (тестовые и с вводом ответа). Вопросы не повторяются внутри одной попытки. Ответы подготовлены для самопроверки и не являются юридической консультацией; задания с пометкой ⚠ требуют сверки с законом.'}));
+ var nFlag=ALL.filter(function(q){return q.flag;}).length;
+ $app.appendChild(el('div',{class:'hero'},[el('h1',{text:'Тест по административному праву'}),
+  el('p',{class:'sub',text:'Подготовка к контрольным. Вопросы не повторяются внутри одной попытки. Ответы — для самопроверки, не юридическая консультация.'}),
+  el('div',{class:'chips'},[el('span',{class:'chip'},['Заданий: ',el('b',{text:String(ALL.length)})]),el('span',{class:'chip'},['Тем: ',el('b',{text:String(Object.keys(TOPICS).length)})]),el('span',{class:'chip',title:'Ответ не удалось достоверно проверить'},['⚠ требуют сверки: ',el('b',{text:String(nFlag)})])])]));
  $app.appendChild(el('div',{class:'card'},[
-  el('h2',{text:'Режим проверки',style:'margin-top:0'}),segMode,
+  el('div',{class:'sec',style:'margin-top:0',text:'Режим проверки'}),segMode,
   el('p',{class:'hint',text:settings.mode==='instant'?'После ответа сразу видно верно/неверно, правильный вариант и пояснение.':'Можно переходить между вопросами и менять ответы. Результат — после «Завершить тест».'}),
-  el('h2',{text:'Количество вопросов'}),el('div',{class:'seg'},cnts),
-  el('h2',{text:'Темы'}),topicBox,
-  el('h2',{text:'Дополнительно'}),
+  el('div',{class:'sec',text:'Количество вопросов'}),el('div',{class:'seg'},cnts),
+  el('div',{class:'sec',text:'Темы'}),el('div',{style:'margin:-4px 0 4px'},[el('button',{class:'linkbtn',type:'button',text:'Выбрать все',onclick:function(){settings.topics=Object.keys(TOPICS);save();home();}}),el('button',{class:'linkbtn',type:'button',text:'Снять все',onclick:function(){settings.topics=[];save();home();}})]),topicBox,
+  el('div',{class:'sec',text:'Дополнительно'}),
   el('div',{class:'topics'},[el('label',null,[cbOpen,el('span',{text:'Включать вопросы с вводом ответа'})]),el('label',null,[cbVer,el('span',{text:'Только вопросы без пометки «требует проверки»'})])]),
-  el('div',{style:'margin-top:16px'},[start])]));
+  el('div',{class:'start'},[start])]));
 }
 /* ---------- попытка ---------- */
 function begin(ids){
@@ -162,26 +196,27 @@ function render(){
  var st=stat();
  var pct=inst?(st.done?Math.round(100*st.ok/st.done):0):null;
  var ans=run.qs.filter(function(x){return inst?x.done:answered(x);}).length;
- $app.appendChild(el('div',{class:'top'},[
+ var sticky=el('div',{class:'sticky'});
+ sticky.appendChild(el('div',{class:'top',style:'margin-bottom:6px'},[
   el('span',null,['Вопрос ',el('b',{text:String(run.i+1)}),' из ',el('b',{text:String(N)})]),
-  el('span',{class:'tag',text:TOPICS[q.topic]}),
   el('span',null,[inst?('Верно: '+pct+'% ('+st.ok+' из '+st.done+')'):('Отвечено: '+ans+' из '+N)])]));
  var bar=el('div',{class:'bar',role:'progressbar','aria-valuemin':'0','aria-valuemax':String(N),'aria-valuenow':String(ans)},[el('i')]);
  bar.firstChild.style.width=(100*ans/N)+'%';
- $app.appendChild(bar);
- var card=el('div',{class:'card',style:'margin-top:14px'});
+ sticky.appendChild(bar);$app.appendChild(sticky);
+ var card=el('div',{class:'card fade',style:'margin-top:8px'});
+ card.appendChild(el('div',null,[el('span',{class:'tag',text:TOPICS[q.topic]}),(q.flag?el('span',{class:'badge',title:'Ответ требует сверки',text:'⚠ проверить'}):null)]));
  card.appendChild(el('div',{class:'q',text:q.q}));
  var locked=item.done&&inst;
  if(q.type==='mc'){
   if(isMulti(q))card.appendChild(el('div',{class:'multi',text:'Выберите несколько вариантов (правильных: '+q.ans.length+')'}));
   var box=el('div',{class:'opts'});
-  item.order.forEach(function(oi){
+  item.order.forEach(function(oi,pos){
    var chosen=item.sel.indexOf(oi)>-1,correct=q.ans.indexOf(oi)>-1;
    var cls='opt'+(isMulti(q)?' m':'')+(chosen?' sel':'');
    var mk='';
    if(locked){cls='opt'+(isMulti(q)?' m':'');if(correct){cls+=' ok';mk='✓';}else if(chosen){cls+=' bad';mk='✕';}}
    else if(chosen)mk=isMulti(q)?'✓':'●';
-   var b=el('button',{class:cls,type:'button',onclick:function(){pick(oi);}},[el('span',{class:'mk',text:mk}),el('span',{text:q.opts[oi]})]);
+   var b=el('button',{class:cls,type:'button',onclick:function(){pick(oi);}},[el('span',{class:'lt',text:locked&&correct?'✓':(locked&&chosen?'✕':'АБВГДЕЖЗИК'.charAt(pos))}),el('span',{class:'tx',text:q.opts[oi]})]);
    if(locked)b.disabled=true;
    box.appendChild(b);});
   card.appendChild(box);
@@ -201,27 +236,29 @@ function render(){
   if(q.flag)ex.appendChild(el('div',{class:'warn',text:'⚠ Ответ спорный или не удалось достоверно проверить — сверьте с актуальной редакцией закона.'}));
   card.appendChild(ex);
  }
- var navb=el('div',{class:'nav'});
+ var navb=el('div',{class:'row'});
  var last=run.i===N-1;
  if(inst){
   if(!item.done){
    var need=(q.type==='open')||isMulti(q);
    var ab=el('button',{class:'primary',type:'button',id:'btn-answer',text:'Ответить',onclick:function(){if(answered(item)){commit(item);render();}}});
    ab.disabled=!answered(item);
-   if(need)navb.appendChild(ab);else navb.appendChild(el('span',{class:'hint',text:'Выберите вариант — ответ засчитывается сразу.'}));
+   if(need)navb.appendChild(ab);else navb.appendChild(el('span',{class:'hint',style:'align-self:center',text:'Нажмите на вариант — ответ засчитается сразу.'}));
   }else{
    navb.appendChild(el('button',{class:'primary',type:'button',text:last?'Завершить тест':'Следующий вопрос',onclick:function(){if(last){run.finished=true;}else run.i++;render();window.scrollTo(0,0);}}));
   }
   navb.appendChild(el('button',{class:'ghost',type:'button',text:'Выйти',onclick:function(){if(confirm('Прервать тест? Прогресс будет потерян.'))home();}}));
  }else{
-  navb.appendChild(el('button',{type:'button',text:'← Назад',onclick:function(){go(-1);}}));
-  navb.appendChild(el('button',{type:'button',text:'Вперёд →',onclick:function(){go(1);}}));
-  navb.appendChild(el('button',{class:'primary',type:'button',text:'Завершить тест',onclick:finishEnd}));
+  navb.appendChild(el('button',{type:'button',text:'←',title:'Назад','aria-label':'Назад',onclick:function(){go(-1);}}));
+  navb.appendChild(el('button',{type:'button',text:item.mark?'★ Отмечен':'☆ Отметить',onclick:function(){item.mark=!item.mark;render();}}));
+  navb.appendChild(el('button',{type:'button',text:'→',title:'Вперёд','aria-label':'Вперёд',onclick:function(){go(1);}}));
+  navb.appendChild(el('button',{class:'primary',type:'button',text:'Завершить',onclick:finishEnd}));
  }
- card.appendChild(navb);
  $app.appendChild(card);
+ var dock=el('div',{class:'dock'},[navb]);$app.appendChild(dock);
+ if(inst)$app.appendChild(el('div',{class:'kbd'},[el('kbd',{text:'1–9'}),' выбрать · ',el('kbd',{text:'Enter'}),' ответить / дальше']));
  if(!inst){
-  var g=el('div',{class:'grid'},run.qs.map(function(x,k){return el('button',{type:'button',class:(answered(x)?'done ':'')+(k===run.i?'cur':''),text:String(k+1),'aria-label':'Вопрос '+(k+1),onclick:function(){run.i=k;render();}});}));
+  var g=el('div',{class:'grid'},run.qs.map(function(x,k){return el('button',{type:'button',class:(answered(x)?'done ':'')+(x.mark?'mark ':'')+(k===run.i?'cur':''),text:String(k+1),'aria-label':'Вопрос '+(k+1),onclick:function(){run.i=k;render();}});}));
   $app.appendChild(g);
  }
  if(q.type==='open'&&!locked){var f=document.querySelector('input.txt');if(f&&!('ontouchstart' in window))f.focus();}
@@ -245,8 +282,8 @@ function results(){
  var wrong=run.qs.filter(function(x){return !x.ok;});
  $app.appendChild(el('h1',{text:'Результат'}));
  $app.appendChild(el('div',{class:'card'},[
-  el('div',{class:'big',text:pct+'%'}),
-  el('div',{class:'bar',style:'margin:10px 0'},[(function(){var i=el('i');i.style.width=pct+'%';return i;})()]),
+  (function(){var r=el('div',{class:'ring'},[el('div',{text:pct+'%'})]);r.style.setProperty('--p',String(pct));r.style.setProperty('--c',pct>=75?'var(--ok)':(pct>=50?'var(--warn)':'var(--bad)'));return r;})(),
+  el('div',{class:'msg',text:pct>=90?'Отлично!':(pct>=75?'Хороший результат':(pct>=50?'Неплохо, есть что подтянуть':'Нужно повторить материал'))}),
   el('div',{class:'stats'},[el('div',{class:'stat'},[el('span',{class:'lab',text:'Верно'}),el('b',{text:String(ok)})]),el('div',{class:'stat'},[el('span',{class:'lab',text:'Неверно'}),el('b',{text:String(bad)})]),el('div',{class:'stat'},[el('span',{class:'lab',text:'Всего'}),el('b',{text:String(N)})])]),
   el('div',{class:'row'},[
    el('button',{class:'primary',type:'button',text:'Пройти заново',onclick:function(){var p=pool();var n=settings.count===0?p.length:Math.min(settings.count,p.length);if(!n){home();return;}begin(shuffle(p).slice(0,n).map(function(q){return q.id;}));}}),
@@ -275,6 +312,18 @@ function results(){
  list('Ошибки',wrong);
  list('Верные ответы',run.qs.filter(function(x){return x.ok;}));
 }
+document.addEventListener('keydown',function(e){
+ if(!run||run.finished||e.ctrlKey||e.metaKey||e.altKey)return;
+ if(e.target&&e.target.tagName==='INPUT')return;
+ var item=run.qs[run.i],q=item.q,inst=run.mode==='instant';
+ if(q.type==='mc'&&/^[1-9]$/.test(e.key)&&!(item.done&&inst)){var oi=item.order[+e.key-1];if(oi!==undefined){e.preventDefault();pick(oi);}}
+ else if(e.key==='Enter'){e.preventDefault();
+  if(inst){if(!item.done){if(answered(item)&&(q.type==='open'||isMulti(q))){commit(item);render();}}
+   else{var b=document.querySelector('.dock .primary');if(b)b.click();}}
+  else go(1);}
+ else if(!inst&&e.key==='ArrowRight')go(1);
+ else if(!inst&&e.key==='ArrowLeft')go(-1);
+});
 home();
 })();
 </script>
